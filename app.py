@@ -3,7 +3,7 @@ import platform
 import json
 import requests
 from datetime import datetime, timedelta
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, after_this_request
 from flask_caching import Cache
 from flask_restful import Resource, Api
 from flask_cors import CORS, cross_origin
@@ -132,7 +132,9 @@ def joinCluster(cluster_id):
 
 @app.route(BASE_URL + "tasks/initk8s", methods=['GET'])
 def initk8s():
-    installers_k8s.init_k8s()
+    @after_this_request
+    def run_initk8s():
+        installers_k8s.init_k8s()
     return jsonify({'Cluster deployed.'})
 
 def healthCheck():
