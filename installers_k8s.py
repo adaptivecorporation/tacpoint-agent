@@ -28,7 +28,8 @@ def init_k8s():
     subprocess.call('sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"', shell=True)
     subprocess.call('apt update', shell=True)
     subprocess.call('apt-cache policy docker-ce', shell=True)
-    subprocess.call('sudo apt-get remove docker docker-engine docker.io containerd runc -y', shell=True)
+    subprocess.call('DEBIAN_FRONTEND=noninteractive sudo apt-get remove docker docker-engine docker.io containerd runc -y', shell=True)
+    subprocess.call('DEBIAN_FRONTEND=noninteractive sudo apt-get -y purge docker-ce docker-ce-cli containerd.io')
     subprocess.call('DEBIAN_FRONTEND=noninteractive sudo apt-get install docker-ce docker-ce-cli containerd.io', shell=True)
     subprocess.call('systemctl restart docker', shell=True)
     # dockerconf1_inp = {
