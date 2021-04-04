@@ -133,8 +133,9 @@ def joinCluster(cluster_id):
 @app.route(BASE_URL + "tasks/initk8s", methods=['GET'])
 def initk8s():
     @after_this_request
-    def run_initk8s():
+    def run_initk8s(response):
         installers_k8s.init_k8s()
+        return response
     return jsonify({'message':'Cluster initilizing.'})
 
 def healthCheck():
