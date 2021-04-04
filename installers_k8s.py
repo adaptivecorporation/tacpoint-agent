@@ -1,5 +1,6 @@
 import subprocess
 import os
+import json
 
 def init_k8s():
     k8sconf_inp = 'overlay \r\nbr_netfilter'
@@ -14,6 +15,13 @@ def init_k8s():
     k8sconf3 = open("/etc/sysctl.conf", "w")
     k8sconf3.write(k8sconf3_inp)
     subprocess.call('mkdir /etc/docker', shell=True)
+    subprocess.call('swapoff -a', shell=True)
+    subprocess.call('hostnamectl set-hostname k8s-master', shell=True)
+    subprocess.call('sysctl --system', shell=True)
+    subprocess.call('apt update', shell=True)
+
+    subprocess.call('DEBIAN_FRONTEND=noninteractive apt install -y apt-transport-https', shell=True)
+    subprocess.call('apt install -y ca-certificates curl software-properties-common', shell=True)
     dockerconf1_inp = {
                         "exec-opts": ["native.cgroupdriver=systemd"],
                         "log-driver": "json-file",
@@ -23,14 +31,7 @@ def init_k8s():
                         "storage-driver": "overlay2"
                         }
     dockerconf = open("/etc/docker/daemon.json")
-    dockerconf.write(dockerconf1_inp)
-    subprocess.call('swapoff -a', shell=True)
-    subprocess.call('hostnamectl set-hostname k8s-master', shell=True)
-    subprocess.call('sysctl --system', shell=True)
-    subprocess.call('apt update', shell=True)
-
-    subprocess.call('DEBIAN_FRONTEND=noninteractive apt install -y apt-transport-https', shell=True)
-    subprocess.call('apt install -y ca-certificates curl software-properties-common', shell=True)
+    dockerconf.write(json.dumps(dockerconf1_inp))
     subprocess.call('systemctl restart docker', shell=True)
     subprocess.call('ufw disable', shell=True)
     subprocess.call('sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg', shell=True)
