@@ -31,7 +31,9 @@ def init_k8s():
     subprocess.call('DEBIAN_FRONTEND=noninteractive sudo apt-get remove docker docker-engine docker.io containerd runc -y', shell=True)
     subprocess.call('DEBIAN_FRONTEND=noninteractive sudo apt-get -y purge docker-ce docker-ce-cli containerd.io', shell=True)
     subprocess.call('DEBIAN_FRONTEND=noninteractive sudo apt-get install docker-ce docker-ce-cli containerd.io -y', shell=True)
+    subprocess.call('systemctl enable docker --now', shell=True)
     subprocess.call('systemctl restart docker', shell=True)
+    
     # dockerconf1_inp = {
     #                 "exec-opts": ["native.cgroupdriver=systemd"],
     #                 "log-driver": "json-file",

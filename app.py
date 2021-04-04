@@ -22,8 +22,9 @@ Compress(app)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 tl = Timeloop()
-
+taskArr = []
 BASE_URL = '/v1/'
+
 
 def open_connection():
     try:
@@ -98,7 +99,7 @@ def gatherSystemInfo():
     response = {"system": system, "hostname": hostname, "os_release": os_release, "os_ver": os_ver, "machine": machine, "proc": processor, "boot_timestamp": boot_timestamp, "cpu_phy_cores": cpu_phy_cores, "cpu_freq": cpu_freq, "cpu_usage": cpu_usage, "mem_total": mem_total, "mem_available": mem_available, "mem_used": mem_used, "mem_percentage": mem_percentage, "swap_total": swap_total, "swap_free": swap_free, "swap_used": swap_used, "swap_percentage": swap_percentage, "partitions": partition_arr, "network": network_arr}
     return response
 
-@tl.job(interval=timedelta(seconds=60))
+@tl.job(interval=timedelta(seconds=15))
 def checkIn():
     healthCheck()
     timestamp = datetime.now().isoformat()
@@ -121,6 +122,7 @@ def joinCluster(cluster_id):
     except Exception as error:
         print(error)
         return jsonify({'message': 'server error'})
+    # host = 'localhost:4444'
     host = res[0]['cluster_host'] + ':' + str(res[0]['cluster_port'])
     print("Host: {0}".format(host))
     uri = 'http://' + host + '/v1/ep/join'
@@ -157,12 +159,16 @@ def healthCheck():
 
     sysinfo = gatherSystemInfo()
     timestamp = datetime.now().isoformat()
-    #host = 'localhost:4444'
+    # host = 'localhost:4444'
     host = q2res[0]['cluster_host'] + ':' + str(q2res[0]['cluster_port'])
     json = {"timestamp": timestamp, "endpoint_id": conf.ep_id, "sysinfo": sysinfo}
     uri = 'http://' + host + '/v1/ep/healthcheck/' + conf.ep_id
     r = requests.put(uri, json=json)
     print(r)
+    resp = r.json()
+    tasks = resp['tasks']
+    for rec in tasks:
+        taskArr.append(rec)
     return 200
 
 tl.start(block=False)
