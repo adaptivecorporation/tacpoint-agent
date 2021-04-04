@@ -14,7 +14,7 @@ import pymysql.cursors
 from bson.objectid import ObjectId
 import time
 from timeloop import Timeloop
-import install
+import installers_k8s
 
 app = Flask(__name__)
 api = Api(app)
@@ -132,7 +132,7 @@ def joinCluster(cluster_id):
 
 @app.route(BASE_URL + "tasks/initk8s", methods=['GET'])
 def initk8s():
-    init_k8s()
+    installers_k8s.ininit_k8s()
     return jsonify({'Cluster deployed.'})
 
 def healthCheck():
