@@ -135,7 +135,7 @@ def initk8s():
     @after_this_request
     def run_initk8s():
         installers_k8s.init_k8s()
-    return jsonify({'Cluster deployed.'})
+    return jsonify({'Cluster initilizing.'})
 
 def healthCheck():
     con = open_connection()
