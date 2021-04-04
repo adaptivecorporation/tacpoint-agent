@@ -1,0 +1,171 @@
+import psutil
+import platform
+import json
+import requests
+from datetime import datetime, timedelta
+from flask import Flask, jsonify, request
+from flask_caching import Cache
+from flask_restful import Resource, Api
+from flask_cors import CORS, cross_origin
+from flask_compress import Compress
+import conf
+import constants
+import pymysql.cursors
+from bson.objectid import ObjectId
+import time
+from timeloop import Timeloop
+import install
+
+app = Flask(__name__)
+api = Api(app)
+Compress(app)
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
+tl = Timeloop()
+
+BASE_URL = '/v1/'
+
+def open_connection():
+    try:
+        con = pymysql.connect(host=constants.DB_HOST, user=constants.DB_USER, password=constants.DB_PASSWORD, database=constants.DB_NAME, cursorclass=pymysql.cursors.DictCursor)
+
+    except Exception as error:
+        print(error)
+    return con
+
+def get_size(bytes, suffix="B"):
+    factor = 1024
+    for unit in ["", "K", "M", "G", "T", "P"]:
+        if bytes < factor:
+            return f"{bytes:.2f}{unit}{suffix}"
+        bytes /= factor
+
+
+def gatherSystemInfo():
+    uname = platform.uname()
+    system = uname.system
+    hostname = uname.node
+    os_release = uname.release
+    os_ver = uname.version
+    machine = uname.machine
+    processor = uname.processor
+    boot_timestamp = psutil.boot_time()
+    cpu_phy_cores = psutil.cpu_count(logical=False)
+    cpu_freq = psutil.cpu_freq()
+    cpu_usage = []
+    for i, percentage in enumerate(psutil.cpu_percent(percpu=True, interval=1)):
+        app = {"core":i,"percentage":percentage}
+        cpu_usage.append(app)
+    svmem = psutil.virtual_memory()
+    mem_total = get_size(svmem.total)
+    mem_available = get_size(svmem.available)
+    mem_used = get_size(svmem.used)
+    mem_percentage = svmem.percent
+    swap = psutil.swap_memory()
+    swap_total = get_size(swap.total)
+    swap_free = get_size(swap.free)
+    swap_used = get_size(swap.used)
+    swap_percentage = swap.percent
+    partitions = psutil.disk_partitions()
+    partition_arr = []
+    for partition in partitions:
+        try:
+            partition_usage = psutil.disk_usage(partition.mountpoint)
+            disk_io = psutil.disk_io_counters()
+            app = {"device": partition.device, "mountpoint": partition.mountpoint, "file_system_type": partition.fstype, "partition_total_size": get_size(partition_usage.total), "partition_used": get_size(partition_usage.used), "partition_free": get_size(partition_usage.free), "percentage_used": partition_usage.percent, "total read":get_size(disk_io.read_bytes), "total_write":get_size(disk_io.write_bytes)}
+            partition_arr.append(app)
+        except PermissionError:
+            # this can be catched due to the disk that
+            # isn't ready
+            continue
+    
+    network_arr = []
+    if_addrs = psutil.net_if_addrs()
+    for interface_name, interface_addresses in if_addrs.items():
+        for address in interface_addresses:
+            if_family = address.family
+            if_name = interface_name
+            if_addr = address.address
+            if_netmask = address.netmask
+            if_broadcastip = address.broadcast
+            if str(address.family) == 'AddressFamily.AF_PACKET': if_mac = address.address
+            else: if_mac = ''
+            if_broadcastmac = address.broadcast
+            net_io = psutil.net_io_counters()
+            app = {"if_family": if_family, "if_name": if_name, "if_addr": if_addr, "if_netmask": if_netmask, "if_broadcastip": if_broadcastip, "if_mac": if_mac, "if_broadcastmac": if_broadcastmac, "total_bytes_sent": get_size(net_io.bytes_sent), "total_bytes_recieved": get_size(net_io.bytes_recv)}
+            network_arr.append(app)
+
+    response = {"system": system, "hostname": hostname, "os_release": os_release, "os_ver": os_ver, "machine": machine, "proc": processor, "boot_timestamp": boot_timestamp, "cpu_phy_cores": cpu_phy_cores, "cpu_freq": cpu_freq, "cpu_usage": cpu_usage, "mem_total": mem_total, "mem_available": mem_available, "mem_used": mem_used, "mem_percentage": mem_percentage, "swap_total": swap_total, "swap_free": swap_free, "swap_used": swap_used, "swap_percentage": swap_percentage, "partitions": partition_arr, "network": network_arr}
+    return response
+
+@tl.job(interval=timedelta(seconds=60))
+def checkIn():
+    healthCheck()
+    timestamp = datetime.now().isoformat()
+    print('{0}: Running healthcheck'.format(timestamp))
+    return
+
+@app.route(BASE_URL + "sysinfo", methods=['GET'])
+def getSysInfo_API():
+    return jsonify({"sys_info": gatherSystemInfo()})
+
+@app.route(BASE_URL + 'cluster/join/<cluster_id>', methods=['GET'])
+def joinCluster(cluster_id):
+    con = open_connection()
+    query = 'select * from clusters where cluster_id="{0}"'.format(cluster_id)
+    try:
+        cur = con.cursor()
+        cur.execute(query)
+        res = cur.fetchall()
+    
+    except Exception as error:
+        print(error)
+        return jsonify({'message': 'server error'})
+    host = res[0]['cluster_host'] + ':' + str(res[0]['cluster_port'])
+    print("Host: {0}".format(host))
+    uri = 'http://' + host + '/v1/ep/join'
+    print("Uri: {0}".format(uri))
+    data = {"timestamp": datetime.now().isoformat(), "endpoint_id": conf.ep_id, "sysinfo": gatherSystemInfo()}
+    r = requests.put(uri, json=data)
+    print(r)
+    return jsonify({'message': 'ok'})
+
+@app.route(BASE_URL + "tasks/initk8s", methods=['GET'])
+def initk8s():
+    init_k8s()
+    return jsonify({'Cluster deployed.'})
+
+def healthCheck():
+    con = open_connection()
+    query = 'select * from endpoints where endpoint_id="{0}"'.format(conf.ep_id)
+    
+    try:
+        cur = con.cursor()
+        cur.execute(query)
+        res = cur.fetchall()
+        q2 = 'select * from clusters where cluster_id="{0}"'.format(res[0]['cluster_id'])
+        cur.execute(q2)
+        q2res = cur.fetchall()
+
+    except Exception as error:
+        print(error)
+        return 500
+    
+
+    sysinfo = gatherSystemInfo()
+    timestamp = datetime.now().isoformat()
+    #host = 'localhost:4444'
+    host = q2res[0]['cluster_host'] + ':' + str(q2res[0]['cluster_port'])
+    json = {"timestamp": timestamp, "endpoint_id": conf.ep_id, "sysinfo": sysinfo}
+    uri = 'http://' + host + '/v1/ep/healthcheck/' + conf.ep_id
+    r = requests.put(uri, json=json)
+    print(r)
+    return 200
+
+tl.start(block=False)
+
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
+    
+
+
