@@ -3,6 +3,8 @@ import os
 import json
 
 def init_k8s():
+    subprocess.call('timedatectl set-timezone America/New_York', shell=True)
+    subprocess.call('timedatectl set-ntp off', shell=True)
     k8sconf_inp = 'overlay \r\nbr_netfilter'
     k8sconf = open("/etc/modules-load.d/k8s.conf", "w")
     k8sconf.write(k8sconf_inp)
