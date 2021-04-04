@@ -28,7 +28,7 @@ def init_k8s():
     subprocess.call('sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"', shell=True)
     subprocess.call('apt update', shell=True)
     subprocess.call('apt-cache policy docker-ce', shell=True)
-    subprocess.call('sudo apt install docker-ce', shell=True)
+    subprocess.call('DEBIAN_FRONTEND=noninteractive sudo apt install docker-ce -y', shell=True)
     subprocess.call('systemctl restart docker', shell=True)
     dockerconf1_inp = {
                     "exec-opts": ["native.cgroupdriver=systemd"],
