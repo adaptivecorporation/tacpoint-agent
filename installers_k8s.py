@@ -12,7 +12,7 @@ def init_k8s():
     k8sconf2.write(k8sconf2_inp)
     k8sconf3_inp = "net.bridge.bridge-nf-call-iptables = 1"
     k8sconf3 = open("/etc/sysctl.conf", "w")
-    k8sconf3.wirte(k8sconf3_inp)
+    k8sconf3.write(k8sconf3_inp)
     subprocess.call('swapoff -a', shell=True)
     subprocess.call('hostnamectl set-hostname k8s-master', shell=True)
     subprocess.call('sysctl --system', shell=True)
