@@ -30,15 +30,15 @@ def init_k8s():
     subprocess.call('apt-cache policy docker-ce', shell=True)
     subprocess.call('DEBIAN_FRONTEND=noninteractive sudo apt install docker-ce -y', shell=True)
     subprocess.call('systemctl restart docker', shell=True)
-    dockerconf1_inp = {
-                    "exec-opts": ["native.cgroupdriver=systemd"],
-                    "log-driver": "json-file",
-                    "log-opts": {
-                        "max-size": "100m"
-                    },
-                    "storage-driver": "overlay2"
-                    }
-    subprocess.call('echo "{0}" >> /etc/docker/daemon.json'.format(dockerconf1_inp), shell=True)
+    # dockerconf1_inp = {
+    #                 "exec-opts": ["native.cgroupdriver=systemd"],
+    #                 "log-driver": "json-file",
+    #                 "log-opts": {
+    #                     "max-size": "100m"
+    #                 },
+    #                 "storage-driver": "overlay2"
+    #                 }
+    # subprocess.call('echo "{0}" >> /etc/docker/daemon.json'.format(dockerconf1_inp), shell=True)
     subprocess.call('ufw disable', shell=True)
     subprocess.call('sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg', shell=True)
     subprocess.call('echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list', shell=True)
