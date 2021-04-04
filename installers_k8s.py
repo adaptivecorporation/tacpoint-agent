@@ -14,14 +14,14 @@ def init_k8s():
     k8sconf3 = open("/etc/sysctl.conf", "w")
     k8sconf3.write(k8sconf3_inp)
     subprocess.call('mkdir /etc/docker', shell=True)
-    dockerconf1_inp = "{
+    dockerconf1_inp = {
                         "exec-opts": ["native.cgroupdriver=systemd"],
                         "log-driver": "json-file",
                         "log-opts": {
                             "max-size": "100m"
                         },
                         "storage-driver": "overlay2"
-                        }"
+                        }
     dockerconf = open("/etc/docker/daemon.json")
     dockerconf.write(dockerconf1_inp)
     subprocess.call('swapoff -a', shell=True)
