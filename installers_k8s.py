@@ -8,7 +8,7 @@ def init_k8s():
     k8sconf.close()
 
     k8sconf2_inp = 'net.bridge.bridge-nf-call-iptables = 1\r\nnet.ipv4.ip_forward = 1\r\nnet.bridge.bridge-nf-call-ip6tables = 1'
-    k8sconf2 = open("/etc/sysctl.d/k8s.conf","w")
+    k8sconf2 = open("/etc/sysctl.conf","w")
     k8sconf2.write(k8sconf2_inp)
     subprocess.call('echo "1" > /proc/sys/net/bridge/bridge-nf-call-iptables', shell=True)
     subprocess.call('swapoff -a', shell=True)
