@@ -17,7 +17,7 @@ def init_k8s():
 
     subprocess.call('DEBIAN_FRONTEND=noninteractive apt install -y apt-transport-https', shell=True)
     subprocess.call('apt install -y ca-certificates curl software-properties-common', shell=True)
-    subprocess.call('systemctl restart docker')
+    subprocess.call('systemctl restart docker', shell=True)
     subprocess.call('ufw disable', shell=True)
     subprocess.call('sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg', shell=True)
     subprocess.call('echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list', shell=True)
