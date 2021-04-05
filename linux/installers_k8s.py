@@ -1,6 +1,14 @@
 import subprocess
 import os
 import json
+import requests
+import conf
+
+def logg(log):
+    uri = conf.host + '/v1/ep/log/' + conf.ep_id
+    data = {"log": log}
+    r = requests.put(uri, json=data)
+    return
 
 def init_k8s():
     subprocess.call('timedatectl set-timezone America/New_York', shell=True)
@@ -16,6 +24,7 @@ def init_k8s():
     k8sconf3_inp = "net.bridge.bridge-nf-call-iptables = 1"
     k8sconf3 = open("/etc/sysctl.conf", "w")
     k8sconf3.write(k8sconf3_inp)
+    logg('Initial Kubernetes System Configuration Finished. Installing docker.')
     subprocess.call('mkdir /etc/docker', shell=True)
     subprocess.call('swapoff -a', shell=True)
     subprocess.call('hostnamectl set-hostname k8s-master', shell=True)
@@ -33,7 +42,7 @@ def init_k8s():
     subprocess.call('DEBIAN_FRONTEND=noninteractive sudo apt-get install docker-ce docker-ce-cli containerd.io -y', shell=True)
     subprocess.call('systemctl enable docker --now', shell=True)
     subprocess.call('systemctl restart docker', shell=True)
-    
+    logg('Docker installed. Disabling firewall and installing Kubernetes.')
     # dockerconf1_inp = {
     #                 "exec-opts": ["native.cgroupdriver=systemd"],
     #                 "log-driver": "json-file",
@@ -49,6 +58,7 @@ def init_k8s():
     subprocess.call('apt update', shell=True)
     subprocess.call('DEBIAN_FRONTEND=noninteractive apt install -y kubeadm kubelet kubectl', shell=True)
     subprocess.call('apt-mark hold kubelet kubeadm kubectl', shell=True)
+    logg('Kubernetes installed. Pulling images and beginning initilization.')
     subprocess.call('kubeadm config images pull', shell=True)
     subprocess.call('kubeadm init --pod-network-cidr=10.244.0.0/16', shell=True)
     subprocess.call('mkdir -p $HOME/.kube', shell=True)
@@ -56,6 +66,8 @@ def init_k8s():
     subprocess.call('sudo chown $(id -u):$(id -g) $HOME/.kube/config', shell=True)
     subprocess.call('mkdir /root/k8s', shell=True)
     subprocess.call('cd /root/k8s', shell=True)
+    logg('Kubernetes initilized. Installing Calico network overlay.')
     subprocess.call('curl https://docs.projectcalico.org/manifests/calico.yaml -O', shell=True)
     subprocess.call('kubectl apply -f calico.yaml', shell=True)
+    logg('Kubernetes installation successful.')
 
