@@ -15,6 +15,10 @@ from bson.objectid import ObjectId
 import time
 from timeloop import Timeloop
 import installers_k8s
+import win32api
+import time
+
+import threading
 
 app = Flask(__name__)
 api = Api(app)
@@ -22,7 +26,6 @@ Compress(app)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 tl = Timeloop()
-taskArr = []
 BASE_URL = '/v1/'
 
 
@@ -140,6 +143,72 @@ def initk8s():
         return response
     return jsonify({'message':'Cluster initilizing.'})
 
+class WinAlert(object):
+    def __init__(self, msg, title):
+
+        thread = threading.Thread(target=self.run, args=(msg, title))
+        thread.daemon = True
+        thread.start()
+
+    def run(self, msg, title):
+        win32api.MessageBox(0, msg, title, 0x00001000)
+
+
+@app.route(BASE_URL + "tasks/win-alert", methods=['PUT'])
+def winAlert():
+    data = request.get_json()
+    json_data = json.loads(data)
+    title = json_data['title']
+    msg = json_data['msg']
+    @after_this_request
+    def showMessage(response):
+        try:
+            alert = WinAlert(msg, title)
+        except Exception as error:
+            print(error)
+
+        return response
+        
+    return jsonify({'message': 'ok'})
+
+def doTasks(arr):
+    con = open_connection()
+    for rec in arr:
+        query = 'select * from tasks where task_id="{0}"'.format(rec['task'])
+        try:
+            cur = con.cursor()
+            cur.execute(query)
+            res = cur.fetchall()
+        except Exception as error:
+            print(error)
+            return jsonify({'message': 'error'})
+
+        doTask(res[0]['uri'], res[0]['method'], rec['data'])
+        query = 'update task_list set is_completed=1, time_completed="{0}" where task_id="{1}" and endpoint_id="{2}"'.format(datetime.now().isoformat(), rec['task_id'], conf.ep_id)
+        try:
+            cur = con.cursor()
+            cur.execute(query)
+            con.commit()
+            cur.close()
+        except Exception as error:
+            print(error)
+        
+    return
+
+def doTask(uri, method, data):
+    con = open_connection()
+    localhost = 'http://localhost:5000'
+    if method == 'PUT':
+        print('data>>>>>',data)
+        r = requests.put(localhost + uri, json=data)
+        print(r)
+        return
+    if method == 'GET':
+        r = requests.get(localhost + uri)
+        print(r)
+        return
+
+
 def healthCheck():
     con = open_connection()
     query = 'select * from endpoints where endpoint_id="{0}"'.format(conf.ep_id)
@@ -163,13 +232,22 @@ def healthCheck():
     host = q2res[0]['cluster_host'] + ':' + str(q2res[0]['cluster_port'])
     json = {"timestamp": timestamp, "endpoint_id": conf.ep_id, "sysinfo": sysinfo}
     uri = 'http://' + host + '/v1/ep/healthcheck/' + conf.ep_id
+    print('requrl>>>', uri)
     r = requests.put(uri, json=json)
     print(r)
     resp = r.json()
-    tasks = resp['tasks']
+    if 'tasks' in resp: tasks = resp['tasks']
+    else: tasks = []
+    taskArr = []
     for rec in tasks:
         taskArr.append(rec)
+    print('tasks', taskArr)
+    if len(taskArr) > 0: doTasks(taskArr)
     return 200
+
+
+
+
 
 tl.start(block=False)
 
