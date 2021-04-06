@@ -144,10 +144,21 @@ def initk8s():
 
 @app.route(BASE_URL + "tasks/k8s/apply", methods=['POST'])
 def apply_k8s():
-    data = request.get_json
-    yml = data['yml']
-    functions.k8s_apply_conf(yml)
-    return jsonify({'message': 'ok'})
+    con = open_connection()
+	if request.method == 'POST':
+		if 'file' not in request.files:
+			print('No file provided')
+			return jsonify({'message': 'no file provided!'})
+		file = request.files['file']
+		if file.filename == '':
+			return jsonify({'message': 'no selected file!'})
+		if file:
+			print('Processing file...')
+			filename = 'k8s.yml'
+			uploaded_file = os.path.join('/root/', filename)
+			file.save(uploaded_file)
+            functions.k8s_apply_conf()
+			return jsonify({'message': '200'})
 
 def doTasks(arr):
     con = open_connection()
