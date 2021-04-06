@@ -202,7 +202,7 @@ def healthCheck():
     # host = 'localhost:4444'
     host = q2res[0]['cluster_host'] + ':' + str(q2res[0]['cluster_port'])
     json = {"timestamp": timestamp, "endpoint_id": conf.ep_id, "sysinfo": sysinfo}
-    uri = 'http://' + host + '/v1/ep/healthcheck/' + conf.ep_id
+    uri = 'https://' + host + '/v1/ep/healthcheck/' + conf.ep_id
     print('requrl>>>', uri)
     r = requests.put(uri, json=json)
     print(r)
