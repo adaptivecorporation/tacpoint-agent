@@ -15,6 +15,7 @@ import time
 from timeloop import Timeloop
 import installers_k8s
 import time
+import functions
 
 import threading
 
@@ -133,13 +134,20 @@ def joinCluster(cluster_id):
     print(r)
     return jsonify({'message': 'ok'})
 
-@app.route(BASE_URL + "tasks/initk8s", methods=['GET'])
+@app.route(BASE_URL + "tasks/k8s/init", methods=['GET'])
 def initk8s():
     @after_this_request
     def run_initk8s(response):
         installers_k8s.init_k8s()
         return response
     return jsonify({'message':'Cluster initilizing.'})
+
+@app.route(BASE_URL + "tasks/k8s/apply", methods=['POST'])
+def apply_k8s():
+    data = request.get_json
+    yml = data['yml']
+    functions.k8s_apply_conf(yml)
+    return jsonify({'message': 'ok'})
 
 def doTasks(arr):
     con = open_connection()
