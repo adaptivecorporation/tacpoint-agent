@@ -126,7 +126,7 @@ def joinCluster(cluster_id):
     # host = 'localhost:4444'
     host = res[0]['cluster_host'] + ':' + str(res[0]['cluster_port'])
     print("Host: {0}".format(host))
-    uri = 'httpa://' + host + '/v1/ep/join'
+    uri = 'https://' + host + '/v1/ep/join'
     print("Uri: {0}".format(uri))
     data = {"timestamp": datetime.now().isoformat(), "endpoint_id": conf.ep_id, "sysinfo": gatherSystemInfo()}
     r = requests.put(uri, json=data)
