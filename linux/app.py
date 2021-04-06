@@ -129,7 +129,7 @@ def joinCluster(cluster_id):
     uri = 'https://' + host + '/v1/ep/join'
     print("Uri: {0}".format(uri))
     data = {"timestamp": datetime.now().isoformat(), "endpoint_id": conf.ep_id, "sysinfo": gatherSystemInfo()}
-    r = requests.put(uri, json=data)
+    r = requests.put(uri, json=data, verify=False)
     print(r)
     return jsonify({'message': 'ok'})
 
@@ -204,7 +204,7 @@ def healthCheck():
     json = {"timestamp": timestamp, "endpoint_id": conf.ep_id, "sysinfo": sysinfo}
     uri = 'https://' + host + '/v1/ep/healthcheck/' + conf.ep_id
     print('requrl>>>', uri)
-    r = requests.put(uri, json=json)
+    r = requests.put(uri, json=json, verify=False)
     print(r)
     resp = r.json()
     if 'tasks' in resp: tasks = resp['tasks']
