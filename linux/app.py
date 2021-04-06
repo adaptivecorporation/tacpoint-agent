@@ -100,7 +100,7 @@ def gatherSystemInfo():
     response = {"system": system, "hostname": hostname, "os_release": os_release, "os_ver": os_ver, "machine": machine, "proc": processor, "boot_timestamp": boot_timestamp, "cpu_phy_cores": cpu_phy_cores, "cpu_freq": cpu_freq, "cpu_usage": cpu_usage, "mem_total": mem_total, "mem_available": mem_available, "mem_used": mem_used, "mem_percentage": mem_percentage, "swap_total": swap_total, "swap_free": swap_free, "swap_used": swap_used, "swap_percentage": swap_percentage, "partitions": partition_arr, "network": network_arr}
     return response
 
-@tl.job(interval=timedelta(seconds=15))
+@tl.job(interval=timedelta(seconds=60))
 def checkIn():
     healthCheck()
     timestamp = datetime.now().isoformat()
@@ -126,7 +126,7 @@ def joinCluster(cluster_id):
     # host = 'localhost:4444'
     host = res[0]['cluster_host'] + ':' + str(res[0]['cluster_port'])
     print("Host: {0}".format(host))
-    uri = 'http://' + host + '/v1/ep/join'
+    uri = 'httpa://' + host + '/v1/ep/join'
     print("Uri: {0}".format(uri))
     data = {"timestamp": datetime.now().isoformat(), "endpoint_id": conf.ep_id, "sysinfo": gatherSystemInfo()}
     r = requests.put(uri, json=data)
@@ -170,6 +170,7 @@ def doTask(uri, method, data):
     localhost = 'http://localhost:5000'
     if method == 'PUT':
         print('data>>>>>',data)
+        data_ = data.replace("'",'"')
         r = requests.put(localhost + uri, json=data)
         print(r)
         return

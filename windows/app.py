@@ -13,7 +13,6 @@ import constants
 import pymysql.cursors
 import time
 from timeloop import Timeloop
-import installers_k8s
 import win32api
 import time
 
@@ -133,14 +132,6 @@ def joinCluster(cluster_id):
     r = requests.put(uri, json=data)
     print(r)
     return jsonify({'message': 'ok'})
-
-@app.route(BASE_URL + "tasks/initk8s", methods=['GET'])
-def initk8s():
-    @after_this_request
-    def run_initk8s(response):
-        installers_k8s.init_k8s()
-        return response
-    return jsonify({'message':'Cluster initilizing.'})
 
 class WinAlert(object):
     def __init__(self, msg, title):
