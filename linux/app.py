@@ -25,6 +25,8 @@ api = Api(app)
 Compress(app)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
+UPLOAD_FOLDER = './uploads/'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 tl = Timeloop()
 BASE_URL = '/v1/'
 
@@ -156,7 +158,7 @@ def apply_k8s():
         if file:
             print('Processing file...')
             filename = 'k8s.yml'
-            uploaded_file = os.path.join('/root/', filename)
+            uploaded_file = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(uploaded_file)
             functions.k8s_apply_conf()
             return jsonify({'message': '200'})
@@ -237,7 +239,13 @@ def healthCheck():
     return 200
 
 
-
+@app.route(BASE_URL + 'shell/cli', methods=['PUT'])
+@token_required()
+def api_cli(current_user):
+    data = request.get_json()
+    cmd = data['cmd']
+    functions.cli(cmd)
+    return jsonify({'message': 'ok'}),200
 
 
 tl.start(block=False)
