@@ -240,8 +240,7 @@ def healthCheck():
 
 
 @app.route(BASE_URL + 'shell/cli', methods=['PUT'])
-@token_required
-def api_cli(current_user):
+def api_cli():
     data = request.get_json()
     cmd = data['cmd']
     functions.cli(cmd)
