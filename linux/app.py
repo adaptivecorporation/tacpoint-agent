@@ -28,7 +28,7 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 UPLOAD_FOLDER = './uploads/'
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 tl = Timeloop()
-BASE_URL = '/v1/'
+BASE_URL = '/api/v0/'
 
 
 def open_connection():
