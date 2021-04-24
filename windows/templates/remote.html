@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+	<style>
+		@font-face {
+		    font-family: roboto;
+		    src: url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@300&display=swap');
+		}
+
+		body {
+			font-family: 'Ubuntu', sans-serif;
+		}
+
+		img {
+			max-width: 100%;
+			max-height: 100vh;
+			height: auto;
+		}
+
+		.screen {
+			background: #B5B5B5;
+			border: 1px solid #474e5d;
+			border-radius: 1px;
+			overflow: hidden;
+			margin-left: auto;
+			margin-right: auto;
+			display: block;
+		}
+
+		.flexbox{
+			display: flex;
+			align-items: center;
+			justify-content: left;
+		}
+		.navbar{
+			margin-bottom: 30px;
+		}
+		.logo{
+			margin-left: 10px;
+			margin-right: 10px;
+		}
+	</style>
+	
+	<head>
+		<meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+		<link type="text/css" rel="stylesheet" href="{{ url_for('static', filename='css/lumen/bulmaswatch.min.css') }}"  media="screen,projection"/>
+		<script type="text/javascript" src="{{ url_for('static', filename='js/jquery-3.3.1.min.js') }}"></script>
+		<script type="text/javascript" src="{{ url_for('static', filename='js/jquery.finger.min.js') }}"></script>
+		<script type="text/javascript" src="{{ url_for('static', filename='js/materialize.min.js') }}"></script>
+		<title>RemotePy Desktop</title>
+	</head>
+	
+	<body>
+		<nav class="navbar" role="navigation" aria-label="main navigation">
+			<div class="navbar-brand">
+			  <a class="navbar-item">
+				<img src="{{ url_for('static', filename='img/logo.png') }}" width="35" height="40" class="logo">
+				<p>Remote Support</p>
+			  </a>
+		  
+			  <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbarBasicExample">
+				<span aria-hidden="true"></span>
+				<span aria-hidden="true"></span>
+				<span aria-hidden="true"></span>
+			  </a>
+			</div>
+		  
+			<div id="navbarBasicExample" class="navbar-menu">
+			  <div class="navbar-start">
+
+		  
+		  
+			  </div>
+		  
+			  <div class="navbar-end">
+				<div class="navbar-item">
+				  <div class="buttons">
+					<a class="button is-light">
+					  Close Session
+					</a>
+				  </div>
+				</div>
+			  </div>
+			</div>
+		  </nav>
+		<div class="section">
+		<div class="title is-4 has-text-centered">Remote Support</div>
+		<div class="subtitle has-text-centered">Session Connected</div>
+
+		<div class="columns">
+			<div class="column">
+				<img class="screen" id="screen" src="{{ url_for('video_feed') }}">	
+			</div>
+		</div>
+
+
+			<div class="columns is-centered">
+				<div class="column is-half">
+					<div class="flexbox">
+					<input id="typeText" class="input" style="width: 600px"></textarea>
+					<button class="button is-success" id="text">Send Command</button>
+					</div>
+					<br/>
+				</div>
+			</div>
+
+			<div class="columns is-centered">
+				<div class="column is-half">
+					<button class="button btn keyboard" id="left">Left</button>
+					<button class="button btn keyboard" id="right">Right</button>
+					<button class="button btn keyboard" id="up">Up</button>
+					<button class="button is-success" id="down">Down</button>
+					<button class="button is-danger " id="backspace">Delete</button>
+					<button class="button light-green" id="enter">Enter</button>
+				</div>
+				
+			</div>
+		</div>
+	</body>
+	
+	<script>
+		function get_xy(event, offset){
+			// function to get position of event on image
+			if(event.pageX == null){
+				// for mobile
+				var x = event.x - offset.left
+				var y = event.y - offset.top;
+			}
+			else{
+				// for pc
+				var x = event.pageX - offset.left
+				var y = event.pageY - offset.top;
+	
+			}
+
+			return [x,y];
+		}
+
+		function mouse_event(screen, event, type) {
+			var offset = screen.offset();
+			var point = get_xy(event, offset);
+			console.log(type);
+			
+			$.ajax({
+				type: 'POST',
+				url: "/api/v0/rmm/screen/mouse",
+				data: {
+						"type": type,
+						"x": point[0], 
+						"y": point[1], 
+						"X": screen.width(), 
+						"Y": screen.height()
+					},
+				success: function(result) { }
+			});
+		} 
+
+		function keyboard_event(type) {
+			console.log(type);
+
+			$.ajax({
+				type: 'POST',
+				url: "/api/v0/rmm/screen/keyboard",
+				data: {
+						"type": type
+					},
+				success: function(result) { }
+			});
+		} 
+
+
+		$(document).ready(function() {
+
+			$.Finger.doubleTapInterval = 2000;
+			document.oncontextmenu = function() {return false;};
+		
+			$('#screen').on('doubletap dblclick', function(event) {
+				var screen = $(this);
+				mouse_event(screen, event, "dblclick");
+			});
+
+			$('#screen').on('tap', function(event) {
+				var screen = $(this);
+				mouse_event(screen, event, "click");
+			});
+
+			$('#screen').on('taphold contextmenu', function(event) {
+				event.preventDefault();
+				var screen = $(this);
+				mouse_event(screen, event, "rightclick");
+			});
+		
+		
+			$('#text').click(function(event) {
+				var text = document.getElementById('typeText').value;
+				console.log(text);
+				$.ajax({
+					type: 'POST',
+					url: "/api/v0/rmm/screen/keyboard",
+					data: {
+							"type": "text",
+							"text": text
+						},
+					success: function(result) { }
+				});
+			});
+
+			$('.keyboard').click(function(event) {
+				keyboard_event(this.id);
+			});
+
+			$('html').on('keyup', function(event){
+				if(event.keyCode == 13){
+					$('#enter').click();
+				}else if(event.keyCode == 8){
+					$('#backspace').click();
+				}else if(event.keyCode == 37){
+					$('#left').click();
+				}else if(event.keyCode == 38){
+					$('#up').click();
+				}else if(event.keyCode == 39){
+					$('#right').click();
+				}else if(event.keyCode == 40){
+					$('#down').click();
+				}
+			});
+		
+		});
+	</script>
+</html>

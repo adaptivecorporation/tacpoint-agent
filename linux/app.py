@@ -137,6 +137,11 @@ def joinCluster(cluster_id):
     print(r)
     return jsonify({'message': 'ok'})
 
+@app.route(BASE_URL + "tasks/system/swapoff", methods=['GET'])
+def system_SwapOff():
+    subprocess.call('sudo swapoff -a', shell=True)
+    return jsonify({"message":"success"})
+
 @app.route(BASE_URL + "tasks/k8s/init", methods=['GET'])
 def initk8s():
     @after_this_request

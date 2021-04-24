@@ -3,7 +3,7 @@ import platform
 import json
 import requests
 from datetime import datetime, timedelta
-from flask import Flask, jsonify, request, after_this_request
+from flask import Flask, jsonify, request, after_this_request, Response, render_template
 from flask_caching import Cache
 from flask_restful import Resource, Api
 from flask_cors import CORS, cross_origin
@@ -15,8 +15,17 @@ import time
 from timeloop import Timeloop
 import win32api
 import time
-
+from PIL import ImageTk, Image
 import threading
+from waitress import serve
+import subprocess
+import sys
+import pyautogui
+from camera_desktop import Camera
+import ctypes
+from datetime import datetime
+pyautogui.FAILSAFE= False
+
 
 app = Flask(__name__)
 api = Api(app)
@@ -24,8 +33,9 @@ Compress(app)
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 tl = Timeloop()
-BASE_URL = '/v1/'
-
+BASE_URL = '/api/v0/'
+MASTER_URL = "https://tacpoint-master-001.adaptive-api.com/api/v0/"
+now = datetime.now().isoformat()
 
 def open_connection():
     try:
@@ -100,7 +110,7 @@ def gatherSystemInfo():
     response = {"system": system, "hostname": hostname, "os_release": os_release, "os_ver": os_ver, "machine": machine, "proc": processor, "boot_timestamp": boot_timestamp, "cpu_phy_cores": cpu_phy_cores, "cpu_freq": cpu_freq, "cpu_usage": cpu_usage, "mem_total": mem_total, "mem_available": mem_available, "mem_used": mem_used, "mem_percentage": mem_percentage, "swap_total": swap_total, "swap_free": swap_free, "swap_used": swap_used, "swap_percentage": swap_percentage, "partitions": partition_arr, "network": network_arr}
     return response
 
-@tl.job(interval=timedelta(seconds=15))
+@tl.job(interval=timedelta(seconds=60))
 def checkIn():
     healthCheck()
     timestamp = datetime.now().isoformat()
@@ -110,6 +120,54 @@ def checkIn():
 @app.route(BASE_URL + "sysinfo", methods=['GET'])
 def getSysInfo_API():
     return jsonify({"sys_info": gatherSystemInfo()})
+
+@app.route(BASE_URL + 'rmm/screen', methods=['GET'])
+def rmm_ScreenShare():
+	return render_template('remote.html')
+
+@app.route(BASE_URL + 'rmm/screen/video_feed')
+def video_feed():
+	return Response(gen(Camera()), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+def gen(camera):
+	while True:
+		frame = camera.get_frame()
+		yield (b'--frame\r\n' + b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+
+@app.route(BASE_URL + 'rmm/screen/mouse', methods=['POST'])
+def mouse_event():
+	# co-ordinates of browser image event
+	ex, ey = float(request.form.get('x')), float(request.form.get('y'))
+	# size of browser image
+	imx, imy = float(request.form.get('X')), float(request.form.get('Y'))
+	# size of desktop
+	dx, dy = pyautogui.size()
+	# co-ordinates of desktop event
+	x, y = dx*(ex/imx), dy*(ey/imy)
+	# mouse event
+	event = request.form.get('type')
+
+	if event == 'click':
+		pyautogui.click(x, y)
+	elif event == 'dblclick':
+		pyautogui.doubleClick(x, y)
+	elif event == 'rightclick':
+		pyautogui.click(x, y, button='right')
+
+	return Response("success")
+
+
+@app.route(BASE_URL + 'rmm/screen/keyboard', methods=['POST'])
+def keyboard_event():
+	# keyoard event
+	event = request.form.get('type')
+	print(event)
+	if event == "text":
+		text = request.form.get("text")
+		pyautogui.typewrite(text)
+	else:
+		pyautogui.press(event)
+	return Response("success")
 
 @app.route(BASE_URL + 'cluster/join/<cluster_id>', methods=['GET'])
 def joinCluster(cluster_id):
@@ -126,7 +184,7 @@ def joinCluster(cluster_id):
     # host = 'localhost:4444'
     host = res[0]['cluster_host'] + ':' + str(res[0]['cluster_port'])
     print("Host: {0}".format(host))
-    uri = 'http://' + host + '/v1/ep/join'
+    uri = 'http://' + host + '/api/v0/ep/join'
     print("Uri: {0}".format(uri))
     data = {"timestamp": datetime.now().isoformat(), "endpoint_id": conf.ep_id, "sysinfo": gatherSystemInfo()}
     r = requests.put(uri, json=data)
@@ -143,11 +201,25 @@ class WinAlert(object):
     def run(self, msg, title):
         win32api.MessageBox(0, msg, title, 0x00001000)
 
+@app.route
+
+@app.route(BASE_URL + "tasks/eset/scan", methods=['GET'])
+def eset_ScanSystem():
+    subprocess.Popen('"C:\Program Files\ESET\ESET Security\ecls.exe" /base-dir="C:\Program Files\ESET\ESET Security\Modules" /auto /aind /log-file=%APPDATA%\Adaptive\Tacpoint\scans\eset-scan-'+now+'.txt', shell=True)
+    return jsonify({"message":"success"})
+
+@app.route(BASE_URL + "tasks/lock-workstation", methods=['GET'])
+def lock_Workstation():
+    cmd='rundll32.exe user32.dll, LockWorkStation'
+    subprocess.call(cmd)
+    return jsonify({"message":"success"})
+
 
 @app.route(BASE_URL + "tasks/win-alert", methods=['PUT'])
 def winAlert():
     data = request.get_json()
     json_data = json.loads(data)
+    print(json.dumps(json_data))
     title = json_data['title']
     msg = json_data['msg']
     @after_this_request
@@ -172,8 +244,9 @@ def doTasks(arr):
         except Exception as error:
             print(error)
             return jsonify({'message': 'error'})
-
-        doTask(res[0]['uri'], res[0]['method'], rec['data'])
+        print(res)
+        if rec['data'] != '': doTask(res[0]['uri'], res[0]['method'], rec['data'])
+        else: doTask(res[0]['uri'], res[0]['method'])
         query = 'update task_list set is_completed=1, time_completed="{0}" where task_id="{1}" and endpoint_id="{2}"'.format(datetime.now().isoformat(), rec['task_id'], conf.ep_id)
         try:
             cur = con.cursor()
@@ -185,7 +258,7 @@ def doTasks(arr):
         
     return
 
-def doTask(uri, method, data):
+def doTask(uri, method, data={}):
     con = open_connection()
     localhost = 'http://localhost:5000'
     if method == 'PUT':
@@ -201,27 +274,19 @@ def doTask(uri, method, data):
 
 def healthCheck():
     con = open_connection()
-    query = 'select * from endpoints where endpoint_id="{0}"'.format(conf.ep_id)
-    
-    try:
-        cur = con.cursor()
-        cur.execute(query)
-        res = cur.fetchall()
-        q2 = 'select * from clusters where cluster_id="{0}"'.format(res[0]['cluster_id'])
-        cur.execute(q2)
-        q2res = cur.fetchall()
-
-    except Exception as error:
-        print(error)
-        return 500
-    
+    r1 = requests.get(MASTER_URL + 'db/ep_id/' + conf.ep_id)
+    r1_res = r1.json()
+    r1_data = r1_res['ep']
+    r2 = requests.get(MASTER_URL + 'db/cluster_id/' + r1_data['cluster_id'])
+    r2_res = r2.json()
+    r2_data = r2_res['cluster']
 
     sysinfo = gatherSystemInfo()
     timestamp = datetime.now().isoformat()
     # host = 'localhost:4444'
-    host = q2res[0]['cluster_host'] + ':' + str(q2res[0]['cluster_port'])
+    host = r2_data['cluster_host'] + ':' + str(r2_data['cluster_port'])
     json = {"timestamp": timestamp, "endpoint_id": conf.ep_id, "sysinfo": sysinfo}
-    uri = 'http://' + host + '/v1/ep/healthcheck/' + conf.ep_id
+    uri = 'https://' + host + '/v1/ep/healthcheck/' + conf.ep_id
     print('requrl>>>', uri)
     r = requests.put(uri, json=json)
     print(r)
