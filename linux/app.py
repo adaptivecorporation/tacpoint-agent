@@ -19,7 +19,7 @@ import functions
 import os
 import subprocess
 import threading
-
+from functions_k8s import get_pods
 app = Flask(__name__)
 api = Api(app)
 Compress(app)
@@ -141,6 +141,11 @@ def joinCluster(cluster_id):
 def system_SwapOff():
     subprocess.call('sudo swapoff -a', shell=True)
     return jsonify({"message":"success"})
+
+@app.route(BASE_URL + "k8s/pods/get", methods=['GET'])
+def get_pods_k8s():
+    pods = get_pods()
+    return jsonify({'pods': pods})
 
 @app.route(BASE_URL + "tasks/k8s/init", methods=['GET'])
 def initk8s():
