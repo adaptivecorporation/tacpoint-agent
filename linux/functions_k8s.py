@@ -7,6 +7,6 @@ def get_pods():
     if path.exists ():
         os.remove('logs/k8s_pods.log')
 
-    with open("logs/k8s_pods.log", "a+") as f:
-        subprocess.call('kubectl get pods --all-namespaces', shell=True, stdout=f)
-        return f.text
+    f = open("logs/k8s_pods.log", "w+")
+    subprocess.call('kubectl get pods --all-namespaces', shell=True, stdout=f)
+    return f.read()
