@@ -141,7 +141,8 @@ def get_pods_k8s():
     arr = []
     f = open('logs/k8s_pods.log', 'r')
     for line in f:
-        arr.append(json.dumps(line))
+        app = line.split(' ')
+        arr.append(app)
     return jsonify({'pods': arr})
 
 @app.route(BASE_URL + "tasks/k8s/init", methods=['GET'])
