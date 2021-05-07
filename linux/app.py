@@ -117,20 +117,13 @@ def getSysInfo_API():
 
 @app.route(BASE_URL + 'cluster/join/<cluster_id>', methods=['GET'])
 def joinCluster(cluster_id):
-    con = open_connection()
-    query = 'select * from clusters where cluster_id="{0}"'.format(cluster_id)
-    try:
-        cur = con.cursor()
-        cur.execute(query)
-        res = cur.fetchall()
+    r = requests.get('https://tacpoint-master-001.adaptive-api.com/api/v0/cluster/uri/' + cluster_id)
+    r_json = r.json()
     
-    except Exception as error:
-        print(error)
-        return jsonify({'message': 'server error'})
     # host = 'localhost:4444'
-    host = res[0]['cluster_host'] + ':' + str(res[0]['cluster_port'])
+    host = r_json['uri']
     print("Host: {0}".format(host))
-    uri = 'https://' + host + '/v1/ep/join'
+    uri = host
     print("Uri: {0}".format(uri))
     data = {"timestamp": datetime.now().isoformat(), "endpoint_id": conf.ep_id, "sysinfo": gatherSystemInfo()}
     r = requests.put(uri, json=data, verify=False)
