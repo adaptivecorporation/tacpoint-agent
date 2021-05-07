@@ -138,8 +138,11 @@ def system_SwapOff():
 @app.route(BASE_URL + "k8s/pods/get", methods=['GET'])
 def get_pods_k8s():
     pods = get_pods()
+    arr = []
     f = open('logs/k8s_pods.log', 'r')
-    return jsonify({'pods': f.read()})
+    for line in f:
+        arr.append(json.dumps(line))
+    return jsonify({'pods': arr})
 
 @app.route(BASE_URL + "tasks/k8s/init", methods=['GET'])
 def initk8s():
