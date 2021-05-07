@@ -141,7 +141,7 @@ def get_pods_k8s():
     arr = []
     f = open('logs/k8s_pods.log', 'r')
     for line in f:
-        app = line.split(' ')
+        app = line.strip()
         arr.append(app)
     return jsonify({'pods': arr})
 
