@@ -253,9 +253,10 @@ def doTasks(arr):
 
 def doTask(uri, method, data={}):
     con = open_connection()
-    localhost = 'http://localhost:5000'
+    localhost = 'http://localhost:5150'
     if method == 'PUT':
         print('data>>>>>',data)
+        print('uri>>>>', localhost + uri)
         r = requests.put(localhost + uri, json=data)
         print(r)
         return
