@@ -3,7 +3,7 @@ import platform
 import json
 import requests
 from datetime import datetime, timedelta
-from flask import Flask, jsonify, request, after_this_request
+from flask import Flask, jsonify, request, after_this_request, render_template
 from flask_caching import Cache
 from flask_restful import Resource, Api
 from flask_cors import CORS, cross_origin
@@ -46,6 +46,14 @@ def get_size(bytes, suffix="B"):
             return f"{bytes:.2f}{unit}{suffix}"
         bytes /= factor
 
+
+@app.route(BASE_URL + 'agent', methods=['GET'])
+def agentHome():
+    sysinfo = gatherSystemInfo()
+    ep_id = conf.ep_id
+    ep_json = {"id": ep_id}
+
+    return render_template('agent.html', sysinfo=sysinfo, ep=ep_json)
 
 def gatherSystemInfo():
     uname = platform.uname()
@@ -117,7 +125,7 @@ def getSysInfo_API():
 
 @app.route(BASE_URL + 'cluster/join/<cluster_id>', methods=['GET'])
 def joinCluster(cluster_id):
-    r = requests.get('https://tacpoint-master-001.adaptive-api.com/api/v0/cluster/uri/' + cluster_id)
+    r = requests.get('https://tacpoint-master-001/api/v0/cluster/uri/' + cluster_id)
     r_json = r.json()
     
     # host = 'localhost:4444'
@@ -255,7 +263,7 @@ def api_cli():
     return jsonify({'message': 'ok'}),200
 
 
-tl.start(block=False)
+#tl.start(block=False)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5150)

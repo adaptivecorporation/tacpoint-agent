@@ -252,7 +252,6 @@ def doTasks(arr):
     return
 
 def doTask(uri, method, data={}):
-    con = open_connection()
     localhost = 'http://localhost:5150'
     if method == 'PUT':
         print('data>>>>>',data)
@@ -267,7 +266,6 @@ def doTask(uri, method, data={}):
 
 
 def healthCheck():
-    con = open_connection()
     r1 = requests.get(MASTER_URL + 'db/ep_id/' + conf.ep_id)
     r1_res = r1.json()
     r1_data = r1_res['ep']
